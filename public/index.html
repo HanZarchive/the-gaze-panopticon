@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Gaze Space - Experience</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .experience-view #viewport-container {
+            height: 90vh;
+        }
+        .experience-view #interface {
+            height: 10vh;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+        }
+        #transform-btn {
+            padding: 10px 30px;
+            font-size: 1em;
+            background: #ffd700;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body class="experience-view">
+    <div id="viewport-container">
+        <canvas id="viewport"></canvas>
+    </div>
+    
+    <div id="interface">
+        <div id="status-bar">
+            <p>WATCHERS: <span id="watcher-count">0</span></p>
+            <p>PRESSURE: <span id="pressure-level">0</span></p>
+            <p>PHASE: <span id="phase-status">WAITING</span></p>
+        </div>
+        
+        <button id="transform-btn" style="display:none;">
+            TRIGGER TRANSMUTATION
+        </button>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

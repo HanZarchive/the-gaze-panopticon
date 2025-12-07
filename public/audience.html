@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Gaze Space - Surveillance</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="audience-view">
+    <div id="viewport-container">
+        <canvas id="viewport"></canvas>
+    </div>
+    
+    <div id="interface">
+        <div id="status-bar">
+            <p>SURVEILLANCE PROTOCOL</p>
+            <p>WATCHERS: <span id="watcher-count">0</span></p>
+            <p>PRESSURE: <span id="pressure-level">0</span></p>
+            <p>STATUS: <span id="phase-status">WAITING</span></p>
+        </div>
+        
+        <button id="gaze-btn" class="glow-btn">
+            <span id="btn-text">HOLD TO GAZE</span>
+        </button>
+        
+        <div id="instruction">
+            <p>You are the watcher. Your gaze has weight.</p>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="js/audience.js"></script>
+</body>
+</html>
