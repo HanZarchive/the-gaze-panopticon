@@ -6,6 +6,9 @@ let scene, camera, renderer;
 let blob, panopticon, lights = [];
 let windowMeshes = [];
 
+let mixer, morphTargets;
+const clock = new THREE.Clock();
+
 // 游戏状态
 let currentState = {
     watchers: 0,
@@ -44,8 +47,8 @@ function init() {
     console.log('Scene created');
     
     // 创建几何体
-    createBlob();
-    console.log('Blob created');
+    loadBlobModel();
+    console.log('Loading Blob');
     
     // 创建Panopticon
     createPanopticon();
@@ -63,24 +66,92 @@ function init() {
     console.log('Animation started');
 }
 
-// 创建中心的几何体
-function createBlob() {
-    const geometry = new THREE.IcosahedronGeometry(1.5, 3);
-    const material = new THREE.MeshStandardMaterial({
-        color: 0x00ffff,
-        metalness: 0.3,
-        roughness: 0.4,
-        emissive: 0x00ffff,
-        emissiveIntensity: 0.2
-    });
+// // 创建中心的几何体
+// function createBlob() {
+//     const geometry = new THREE.IcosahedronGeometry(1.5, 3);
+//     const material = new THREE.MeshStandardMaterial({
+//         color: 0x00ffff,
+//         metalness: 0.3,
+//         roughness: 0.4,
+//         emissive: 0x00ffff,
+//         emissiveIntensity: 0.2
+//     });
     
-    blob = new THREE.Mesh(geometry, material);
-    blob.castShadow = true;
-    scene.add(blob);
+//     blob = new THREE.Mesh(geometry, material);
+//     blob.castShadow = true;
+//     scene.add(blob);
     
-    // 保存原始顶点位置
-    const positions = geometry.attributes.position.array;
-    blob.geometry.userData.originalPositions = new Float32Array(positions);
+//     // 保存原始顶点位置
+//     const positions = geometry.attributes.position.array;
+//     blob.geometry.userData.originalPositions = new Float32Array(positions);
+// }
+
+// 加载 GLB 模型
+function loadBlobModel() {
+    console.log('Starting to load GLB model...');
+    
+    const loader = new THREE.GLTFLoader();
+    
+    loader.load(
+        '/models/blob01.glb',  // GLB文件路径
+        
+        // 成功加载后的回调
+        function (gltf) {
+            console.log('GLB loaded successfully', gltf);
+            
+            // 获取整个模型场景
+            blob = gltf.scene;
+            
+            // 添加到Three.js场景
+            scene.add(blob);
+            
+            // 设置位置和大小
+            blob.position.set(0, 0, 0);
+            blob.scale.set(1, 1, 1);
+            
+            // 遍历模型，找到有morph targets的mesh
+            blob.traverse((child) => {
+                if (child.isMesh) {
+                    console.log('Found mesh:', child.name);
+                    
+                    if (child.morphTargetInfluences) {
+                        console.log('This mesh has morph targets!');
+                        console.log('Morph targets count:', child.morphTargetInfluences.length);
+                        
+                        // 保存morph targets的引用
+                        morphTargets = child.morphTargetInfluences;
+                        
+                        // 初始化所有morph targets为0
+                        for (let i = 0; i < morphTargets.length; i++) {
+                            morphTargets[i] = 0;
+                        }
+                    }
+                }
+            });
+            
+            // 如果模型包含动画（可能没有）
+            if (gltf.animations && gltf.animations.length > 0) {
+                console.log('Found animations:', gltf.animations.length);
+                mixer = new THREE.AnimationMixer(blob);
+                const action = mixer.clipAction(gltf.animations[0]);
+                action.play();
+            }
+            
+            console.log('Blob model setup complete!');
+        },
+        
+        // 加载进度的回调
+        function (xhr) {
+            const percent = (xhr.loaded / xhr.total * 100).toFixed(0);
+            console.log(`Loading model: ${percent}%`);
+        },
+        
+        // 加载失败的回调
+        function (error) {
+            console.error('Error loading GLB model:', error);
+            alert('Failed to load 3D model');
+        }
+    );
 }
 
 // 创建Panopticon环境
@@ -184,43 +255,43 @@ function createLights() {
     lights.push(spotLight);
 }
 
-// 更新几何体变形
-function updateBlobDeformation() {
-    if (!blob || !blob.geometry.userData.originalPositions) return;
+// // 更新几何体变形
+// function updateBlobDeformation() {
+//     if (!blob || !blob.geometry.userData.originalPositions) return;
     
-    const positions = blob.geometry.attributes.position.array;
-    const originalPositions = blob.geometry.userData.originalPositions;
+//     const positions = blob.geometry.attributes.position.array;
+//     const originalPositions = blob.geometry.userData.originalPositions;
     
-    const phase = currentState.phase;
+//     const phase = currentState.phase;
     
-    for (let i = 0; i < positions.length; i += 3) {
-        const ox = originalPositions[i];
-        const oy = originalPositions[i + 1];
-        const oz = originalPositions[i + 2];
+//     for (let i = 0; i < positions.length; i += 3) {
+//         const ox = originalPositions[i];
+//         const oy = originalPositions[i + 1];
+//         const oz = originalPositions[i + 2];
         
-        let deformation = 0;
+//         let deformation = 0;
         
-        if (phase === 'stable') {
-            deformation = Math.sin(Date.now() * 0.001 + i) * 0.05;
-        } else if (phase === 'unstable') {
-            deformation = Math.sin(Date.now() * 0.003 + i) * 0.2;
-        } else if (phase === 'critical') {
-            deformation = Math.sin(Date.now() * 0.005 + i) * 0.5;
-        } else if (phase === 'rupture') {
-            deformation = (Math.random() - 0.5) * 1.5;
-        } else if (phase === 'transmutation') {
-            deformation = Math.sin(Date.now() * 0.001 + i) * 0.1;
-        }
+//         if (phase === 'stable') {
+//             deformation = Math.sin(Date.now() * 0.001 + i) * 0.05;
+//         } else if (phase === 'unstable') {
+//             deformation = Math.sin(Date.now() * 0.003 + i) * 0.2;
+//         } else if (phase === 'critical') {
+//             deformation = Math.sin(Date.now() * 0.005 + i) * 0.5;
+//         } else if (phase === 'rupture') {
+//             deformation = (Math.random() - 0.5) * 1.5;
+//         } else if (phase === 'transmutation') {
+//             deformation = Math.sin(Date.now() * 0.001 + i) * 0.1;
+//         }
         
-        const scale = 1 + deformation;
-        positions[i] = ox * scale;
-        positions[i + 1] = oy * scale;
-        positions[i + 2] = oz * scale;
-    }
+//         const scale = 1 + deformation;
+//         positions[i] = ox * scale;
+//         positions[i + 1] = oy * scale;
+//         positions[i + 2] = oz * scale;
+//     }
     
-    blob.geometry.attributes.position.needsUpdate = true;
-    blob.geometry.computeVertexNormals();
-}
+//     blob.geometry.attributes.position.needsUpdate = true;
+//     blob.geometry.computeVertexNormals();
+// }
 
 // 更新材质颜色
 function updateBlobMaterial() {
@@ -283,19 +354,47 @@ function updateWindows() {
     });
 }
 
+// 根据压力值更新形态键
+function updateBlobMorph() {
+    // 检查morphTargets是否存在
+    if (!morphTargets || morphTargets.length === 0) {
+        return;  // 如果没有，直接返回
+    }
+    
+    // 将压力值(0-100)映射到形态键(0-1)
+    const pressure = currentState.totalPressure;
+    const normalizedPressure = Math.min(pressure / 100, 1.0);
+    
+    // 更新第一个morph target（对应Blender的"键 1"）
+    morphTargets[0] = normalizedPressure;
+    
+    // 调试输出（可选，帮助你看到变化）
+    // console.log('Pressure:', pressure.toFixed(1), 'Morph:', normalizedPressure.toFixed(2));
+}
+
 // 动画循环
 function animate() {
     requestAnimationFrame(animate);
+
+    // ⭐ 添加：更新动画mixer（如果有）
+    if (mixer) {
+        const delta = clock.getDelta();
+        mixer.update(delta);
+    }
+    // ⭐ 添加：更新形态键
+    updateBlobMorph();
     
-    updateBlobDeformation();
+    // updateBlobDeformation();
     updateBlobMaterial();
     updateWindows();
     
-    if (currentState.phase === 'critical' || currentState.phase === 'rupture') {
-        blob.rotation.y += 0.02;
-        blob.rotation.x += 0.01;
-    } else {
-        blob.rotation.y += 0.005;
+    // 旋转（保留，但检查blob是否存在）
+    if (blob) {
+        if (currentState.phase === 'critical' || currentState.phase === 'rupture') {
+            blob.rotation.y += 0.02;
+        } else {
+            blob.rotation.y += 0.005;
+        }
     }
     
     if (currentState.phase === 'transmutation') {
