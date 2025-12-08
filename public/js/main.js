@@ -40,6 +40,11 @@ let mixer, morphTargets;
 const clock = new THREE.Clock();
 let controls;
 
+// ⭐ 添加爆炸相关变量
+let particles = [];
+let ruptureStartTime = null;
+let transmutationStarted = false;
+
 // 游戏状态
 let currentState = {
     watchers: 0,
@@ -253,6 +258,83 @@ function createLights() {
     scene.add(dirLight);
 }
 
+// 创建爆炸粒子
+function createExplosionParticles() {
+    const particleCount = 200;
+    const geometry = new THREE.BufferGeometry();
+    const positions = [];
+    const velocities = [];
+    
+    // 从 blob 的位置发射粒子
+    for (let i = 0; i < particleCount; i++) {
+        // 初始位置：接近中心
+        positions.push(
+            (Math.random() - 0.5) * 2,
+            (Math.random() - 0.5) * 2,
+            (Math.random() - 0.5) * 2
+        );
+        
+        // 随机速度：向外爆炸
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.random() * Math.PI;
+        const speed = 0.05 + Math.random() * 0.1;
+        
+        velocities.push(
+            Math.sin(phi) * Math.cos(theta) * speed,
+            Math.sin(phi) * Math.sin(theta) * speed,
+            Math.cos(phi) * speed
+        );
+    }
+    
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    
+    const material = new THREE.PointsMaterial({
+        color: 0xff0000,
+        size: 0.2,
+        transparent: true,
+        opacity: 1.0,
+        blending: THREE.AdditiveBlending
+    });
+    
+    const particleSystem = new THREE.Points(geometry, material);
+    scene.add(particleSystem);
+    
+    return {
+        system: particleSystem,
+        velocities: velocities,
+        life: 1.0
+    };
+}
+
+// 更新爆炸粒子
+function updateExplosionParticles() {
+    particles.forEach((particle, index) => {
+        const positions = particle.system.geometry.attributes.position.array;
+        
+        // 更新每个粒子位置
+        for (let i = 0; i < positions.length; i += 3) {
+            positions[i] += particle.velocities[i];
+            positions[i + 1] += particle.velocities[i + 1];
+            positions[i + 2] += particle.velocities[i + 2];
+            
+            // 添加重力
+            particle.velocities[i + 1] -= 0.001;
+        }
+        
+        particle.system.geometry.attributes.position.needsUpdate = true;
+        
+        // 粒子生命值衰减
+        particle.life -= 0.01;
+        particle.system.material.opacity = particle.life;
+        
+        // 移除死亡粒子
+        if (particle.life <= 0) {
+            scene.remove(particle.system);
+            particles.splice(index, 1);
+        }
+    });
+}
+
 function updateBlobMaterial() {
     if (!blob) return;
     
@@ -345,16 +427,126 @@ function animate() {
     updateBlobMaterial();
     updateWindows();
     
-    if (currentState.phase === 'transmutation' && blob) {
-        blob.position.y += 0.01;
+    const phase = currentState.phase;
+    
+    // ⭐ Rupture 阶段：爆炸效果
+    if (phase === 'rupture') {
+        if (!ruptureStartTime) {
+            ruptureStartTime = Date.now();
+            console.log('Rupture started!');
+        }
+        
+        const ruptureTime = (Date.now() - ruptureStartTime) / 1000; // 秒
+        
+        if (blob) {
+            // 剧烈抖动
+            blob.position.x = (Math.random() - 0.5) * 0.3;
+            blob.position.y = (Math.random() - 0.5) * 0.3;
+            blob.position.z = (Math.random() - 0.5) * 0.3;
+            
+            // 快速旋转
+            blob.rotation.x += 0.05;
+            blob.rotation.y += 0.08;
+            blob.rotation.z += 0.03;
+        }
+        
+        // Panopticon 震动和裂开
         if (panopticon) {
             panopticon.children.forEach(child => {
                 if (child.material) {
-                    child.material.opacity = Math.max(0, child.material.opacity - 0.01);
-                    child.material.transparent = true;
+                    // 逐渐变透明
+                    if (child.material.opacity === undefined) {
+                        child.material.transparent = true;
+                        child.material.opacity = 1.0;
+                    }
+                    child.material.opacity -= 0.005;
+                    
+                    // 墙壁震动
+                    if (child.geometry.type === 'CylinderGeometry') {
+                        child.position.x = (Math.random() - 0.5) * 0.1;
+                        child.position.z = (Math.random() - 0.5) * 0.1;
+                    }
                 }
             });
         }
+        
+        // 1秒后开始生成爆炸粒子
+        if (ruptureTime > 1.0 && particles.length < 5) {
+            particles.push(createExplosionParticles());
+        }
+        
+        // 2秒后，物体消失
+        if (ruptureTime > 2.0 && blob) {
+            blob.visible = false;
+        }
+    }
+    
+    // ⭐ Transmutation 阶段：重生
+    if (phase === 'transmutation') {
+        if (!transmutationStarted) {
+            transmutationStarted = true;
+            ruptureStartTime = null;
+            console.log('Transmutation started - resetting blob');
+            
+            // 重置 blob
+            if (blob) {
+                blob.visible = true;
+                blob.position.set(0, -5, 0); // 从下方开始
+                blob.rotation.set(0, 0, 0);
+                blob.scale.set(1, 1, 1);
+                
+                // 重置形态键
+                if (morphTargets) {
+                    for (let i = 0; i < morphTargets.length; i++) {
+                        morphTargets[i] = 0;
+                    }
+                }
+            }
+            
+            // 清除所有粒子
+            particles.forEach(particle => {
+                scene.remove(particle.system);
+            });
+            particles = [];
+        }
+        
+        // 物体上升
+        if (blob && blob.position.y < 0) {
+            blob.position.y += 0.05;
+        }
+        
+        // Panopticon 逐渐恢复
+        if (panopticon) {
+            panopticon.children.forEach(child => {
+                if (child.material && child.material.opacity !== undefined) {
+                    child.material.opacity = Math.min(1.0, child.material.opacity + 0.01);
+                }
+                
+                // 重置位置
+                if (child.geometry.type === 'CylinderGeometry') {
+                    child.position.x = 0;
+                    child.position.z = 0;
+                }
+            });
+        }
+        
+        // 缓慢旋转
+        if (blob) {
+            blob.rotation.y += 0.002;
+        }
+    }
+    
+    // 其他阶段重置标志
+    if (phase !== 'rupture') {
+        ruptureStartTime = null;
+    }
+    if (phase !== 'transmutation') {
+        transmutationStarted = false;
+    }
+    
+    // 更新粒子
+    if (particles.length > 0) {
+        updateExplosionParticles();
     }
     
     renderer.render(scene, camera);
