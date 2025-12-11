@@ -1,20 +1,19 @@
-// 
+let currentSession = null;
 
-// Socket.io连接
+let panopticonParent; 
 const socket = io();
 
-// Three.js场景设置
 let scene, camera, renderer;
 let blob, panopticon, lights = [];
 let windowMeshes = [];
 let mixer, morphTargets;
 const clock = new THREE.Clock();
+let controls;
 
 let particles = [];
 let ruptureStartTime = null;
 let transmutationStarted = false;
 
-// 游戏状态
 let currentState = {
     watchers: 0,
     totalPressure: 0,
@@ -25,6 +24,7 @@ let currentState = {
 // 初始化
 function init() {
     console.log('Initializing audience view...');
+    scene = new THREE.Scene();
     
     scene = new THREE.Scene();
     
@@ -72,8 +72,8 @@ function init() {
     createLights();
     console.log('Lights created');
     
-    createPanopticon();
-    console.log('Panopticon created');
+    // createPanopticon();
+    // console.log('Panopticon created');
     
     loadBlobModel();
     
@@ -87,7 +87,7 @@ function loadBlobModel() {
     const loader = new THREE.GLTFLoader();
     
     loader.load(
-        '/models/blob01.glb',
+        '/models/blob02.glb',
         
         function (gltf) {
             console.log('GLB loaded successfully');
@@ -155,41 +155,41 @@ function loadBlobModel() {
     );
 }
 
-// 创建Panopticon环境
-function createPanopticon() {
-    panopticon = new THREE.Group();
+// // 创建Panopticon环境
+// function createPanopticon() {
+//     panopticon = new THREE.Group();
     
-    const wallGeometry = new THREE.CylinderGeometry(10, 10, 6, 32, 1, true);
-    const wallMaterial = new THREE.MeshStandardMaterial({
-        color: 0x222222,
-        side: THREE.BackSide,
-        metalness: 0.5,
-        roughness: 0.7
-    });
-    const walls = new THREE.Mesh(wallGeometry, wallMaterial);
-    walls.receiveShadow = true;
-    panopticon.add(walls);
+//     const wallGeometry = new THREE.CylinderGeometry(10, 10, 6, 32, 1, true);
+//     const wallMaterial = new THREE.MeshStandardMaterial({
+//         color: 0x222222,
+//         side: THREE.BackSide,
+//         metalness: 0.5,
+//         roughness: 0.7
+//     });
+//     const walls = new THREE.Mesh(wallGeometry, wallMaterial);
+//     walls.receiveShadow = true;
+//     panopticon.add(walls);
     
-    const floorGeometry = new THREE.CircleGeometry(10, 32);
-    const floorMaterial = new THREE.MeshStandardMaterial({
-        color: 0x111111,
-        metalness: 0.2,
-        roughness: 0.8
-    });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -3;
-    floor.receiveShadow = true;
-    panopticon.add(floor);
+//     const floorGeometry = new THREE.CircleGeometry(10, 32);
+//     const floorMaterial = new THREE.MeshStandardMaterial({
+//         color: 0x111111,
+//         metalness: 0.2,
+//         roughness: 0.8
+//     });
+//     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+//     floor.rotation.x = -Math.PI / 2;
+//     floor.position.y = -3;
+//     floor.receiveShadow = true;
+//     panopticon.add(floor);
     
-    const gridHelper = new THREE.GridHelper(20, 20, 0x00ffff, 0x00ffff);
-    gridHelper.position.y = -2.9;
-    gridHelper.material.opacity = 0.2;
-    gridHelper.material.transparent = true;
-    panopticon.add(gridHelper);
+//     const gridHelper = new THREE.GridHelper(20, 20, 0x00ffff, 0x00ffff);
+//     gridHelper.position.y = -2.9;
+//     gridHelper.material.opacity = 0.2;
+//     gridHelper.material.transparent = true;
+//     panopticon.add(gridHelper);
     
-    scene.add(panopticon);
-}
+//     scene.add(panopticon);
+// }
 
 // 创建灯光
 function createLights() {
