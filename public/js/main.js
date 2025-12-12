@@ -35,8 +35,8 @@ function init() {
     const height = container.clientHeight;
     
     camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
-    camera.position.set(0, 1, 5);
-    camera.lookAt(0, 1, 0);
+    camera.position.set(0, 2.1, 0);
+    camera.lookAt(0, 1, -5);
     
     const canvas = document.getElementById('viewport');
     renderer = new THREE.WebGLRenderer({ 
@@ -94,14 +94,13 @@ function loadBlobModel() {
         
         const model = gltf.scene;
         scene.add(model);
-        
-        // 强制模型位置在原点
-        model.position.set(0, 0, 0);
 
         model.traverse((child) => {
             if (child.isMesh) {
                 if (child.name.includes('Self')) {
                     blob = child;
+                    blob.scale.set(1, 1, 1);
+                    blob.position.set(0, 1, 0); 
                     setupBlobMaterial(child);
                     if (child.morphTargetInfluences) {
                         morphTargets = child.morphTargetInfluences;
@@ -110,10 +109,16 @@ function loadBlobModel() {
                 
                 if (child.name.includes('Panopticon')) {
                     panopticon = child;
+                    panopticon.position.set(0, 0, 0); 
                     setupPanopticon(child);
                 }
             }
         });
+
+                console.log('Model position:', model.position);
+console.log('Blob position:', blob?.position);
+console.log('Blob scale:', blob?.scale);
+console.log('Panopticon scale:', panopticonParent?.scale);
         
         if (gltf.animations && gltf.animations.length > 0) {
             mixer = new THREE.AnimationMixer(model);
@@ -123,6 +128,7 @@ function loadBlobModel() {
         renderer.setAnimationLoop(animate);
     });
 }
+
 
 // ========== 材质设置辅助函数 ==========
 function setupBlobMaterial(mesh) {
