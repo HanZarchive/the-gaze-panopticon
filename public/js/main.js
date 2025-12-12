@@ -188,7 +188,8 @@ function updateBlobMaterial() {
             intensity: Math.floor(Date.now() / 50) % 2 === 0 ? 0.8 : 0.4
         },
         rupture: { color: 0xff0000, intensity: 0.8 },
-        transmutation: { color: 0xffd700, intensity: 1.0 }
+        // transmutation: { color: 0xffd700, intensity: 1.0 }
+        transmutation: { color: 0xffffff, intensity: 2.0 }
     };
     
     const config = phaseConfig[currentState.phase] || phaseConfig.waiting;
@@ -313,31 +314,31 @@ function updateExplosion() {
     }
 }
 
-// ========== 场景切换 ==========
-function switchToWarmWorld() {
-    scene.background = new THREE.Color(0xffe4b5);
-    scene.fog = new THREE.FogExp2(0xffe4b5, 0.01);
+// // ========== 场景切换 ==========
+// function switchToWarmWorld() {
+//     scene.background = new THREE.Color(0xffe4b5);
+//     scene.fog = new THREE.FogExp2(0xffe4b5, 0.01);
     
-    lights.forEach(light => {
-        if (light.isAmbientLight) {
-            light.color.setHex(0xffffff);
-            light.intensity = 2.0;
-        }
-        if (light.isDirectionalLight) {
-            light.color.setHex(0xffd700);
-            light.intensity = 1.0;
-        }
-        if (light.isPointLight) {
-            light.intensity = 0;
-        }
-    });
+//     lights.forEach(light => {
+//         if (light.isAmbientLight) {
+//             light.color.setHex(0xffffff);
+//             light.intensity = 2.0;
+//         }
+//         if (light.isDirectionalLight) {
+//             light.color.setHex(0xffd700);
+//             light.intensity = 1.0;
+//         }
+//         if (light.isPointLight) {
+//             light.intensity = 0;
+//         }
+//     });
 
-    if (panopticon) panopticon.visible = false;
-    if (debrisSystem) {
-        scene.remove(debrisSystem);
-        debrisSystem = null;
-    }
-}
+//     if (panopticon) panopticon.visible = false;
+//     if (debrisSystem) {
+//         scene.remove(debrisSystem);
+//         debrisSystem = null;
+//     }
+// }
 
 // ========== 动画循环 ==========
 function animate() {
@@ -390,17 +391,41 @@ function animate() {
     if (phase === 'transmutation') {
         if (!transmutationStarted) {
             transmutationStarted = true;
-            switchToWarmWorld();
             
+            // ⭐ Panopticon 永久消失
+            if (panopticon) {
+                panopticon.visible = false;
+            }
+            
+            // ⭐ 清理爆炸碎片
+            if (debrisSystem) {
+                scene.remove(debrisSystem);
+                debrisSystem = null;
+            }
+            
+            // ⭐ 重置 blob
             if (blob) {
-                blob.position.set(0, 0, 0);
+                blob.position.set(0, 1, 0);
                 blob.scale.set(1, 1, 1);
+                blob.rotation.set(0, 0, 0);
+                
+                // ⭐ 设置柔软材质
+                blob.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        child.material.roughness = 0.6;  // 更粗糙 = 更柔软
+                        child.material.metalness = 0.2;  // 降低金属度
+                        child.material.envMapIntensity = 0.5; // 降低环境反射
+                        child.material.transparent = true;
+                        child.material.opacity = 0.7;
+                    }
+                });
             }
         }
         
+        // ⭐ 柔和的漂浮和旋转
         if (blob) {
             blob.rotation.y += CONFIG.FLOAT_SPEED;
-            blob.position.y = Math.sin(Date.now() * 0.001) * 0.5;
+            blob.position.y = 1 + Math.sin(Date.now() * 0.001) * 0.3;
         }
     }
 

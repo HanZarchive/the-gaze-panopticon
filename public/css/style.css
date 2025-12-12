@@ -126,3 +126,40 @@ body {
     justify-content: flex-start;
     gap: 20px;
 }
+/* ⭐ 添加这些 */
+#orientation-status {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #00ffff;
+    border-radius: 8px;
+    padding: 15px 20px;
+    z-index: 1000;
+}
+
+#gaze-instruction {
+    color: #00ffff;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    margin: 0;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+#gaze-instruction.gazing {
+    color: #ff0000;
+    font-weight: bold;
+    animation: pulse 0.5s infinite;
+}
+
+#angle-display {
+    color: #666;
+    font-family: 'Courier New', monospace;
+    margin: 5px 0 0 0;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}

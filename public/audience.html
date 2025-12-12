@@ -11,7 +11,7 @@
         <canvas id="viewport"></canvas>
     </div>
     
-    <div id="interface">
+    <!-- <div id="interface">
         <div id="status-bar">
             <p>SURVEILLANCE PROTOCOL</p>
             <p>WATCHERS: <span id="watcher-count">0</span></p>
@@ -21,11 +21,24 @@
         
         <button id="gaze-btn" class="glow-btn">
             <span id="btn-text">HOLD TO GAZE</span>
-        </button>
+        </button> -->
+
+        <div id="interface">
+    <div id="status-bar">
+        <p>WATCHERS: <span id="watcher-count">0</span></p>
+        <p>PRESSURE: <span id="pressure-level">0</span></p>
+        <p>PHASE: <span id="phase-status">WAITING</span></p>
+    </div>
+    
+    <div id="orientation-status">
+        <p id="gaze-instruction">HOLD PHONE UP TO GAZE</p>
+        <p id="angle-display" style="font-size: 12px; opacity: 0.5;">β: -- γ: --</p>
+    </div>
+</div>
         
-        <div id="instruction">
+        <!-- <div id="instruction">
             <p>You are the watcher. Your gaze has weight.</p>
-        </div>
+        </div> -->
     </div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
