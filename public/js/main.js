@@ -72,8 +72,6 @@ function init() {
         controls.lock();
     });
     
-    console.log('OrbitControls created');
-    
     createLights();
     loadBlobModel();
 
@@ -188,7 +186,6 @@ function updateBlobMaterial() {
             intensity: Math.floor(Date.now() / 50) % 2 === 0 ? 0.8 : 0.4
         },
         rupture: { color: 0xff0000, intensity: 0.8 },
-        // transmutation: { color: 0xffd700, intensity: 1.0 }
         transmutation: { color: 0xffffff, intensity: 2.0 }
     };
     
@@ -343,9 +340,25 @@ function updateExplosion() {
 // ========== 动画循环 ==========
 function animate() {
     if (mixer) mixer.update(clock.getDelta());
-    
+
     updateBlobMorph();
     updateBlobMaterial();
+    
+    // if (phase !== 'transmutation') {
+    //     updateBlobMorph();
+    //     // transmutationStarted = false;
+        
+    //     // // ⭐ 如果从 transmutation 回到其他阶段，恢复材质
+    //     // if (blob && transmutationStarted === false) {
+    //     //     blob.traverse((child) => {
+    //     //         if (child.isMesh && child.material) {
+    //     //             // 恢复正常材质
+    //     //             setupBlobMaterial(child);
+    //     //         }
+    //     //     });
+    //     // }
+    // }
+    // updateBlobMaterial();
     
     const phase = currentState.phase;
 
@@ -388,49 +401,117 @@ function animate() {
     }
     
     // Transmutation phase: 重生
-    if (phase === 'transmutation') {
-        if (!transmutationStarted) {
-            transmutationStarted = true;
+    // if (phase === 'transmutation') {
+    //     if (!transmutationStarted) {
+    //         transmutationStarted = true;
             
-            // ⭐ Panopticon 永久消失
-            if (panopticon) {
-                panopticon.visible = false;
-            }
+    //         // ⭐ Panopticon 永久消失
+    //         if (panopticon) {
+    //             panopticon.visible = false;
+    //         }
             
-            // ⭐ 清理爆炸碎片
-            if (debrisSystem) {
-                scene.remove(debrisSystem);
-                debrisSystem = null;
-            }
+    //         // ⭐ 清理爆炸碎片
+    //         if (debrisSystem) {
+    //             scene.remove(debrisSystem);
+    //             debrisSystem = null;
+    //         }
             
-            // ⭐ 重置 blob
-            if (blob) {
-                blob.position.set(0, 1, 0);
-                blob.scale.set(1, 1, 1);
-                blob.rotation.set(0, 0, 0);
+    //         // ⭐ 重置 blob
+    //         if (blob) {
+    //             blob.position.set(0, 1, 0);
+    //             blob.scale.set(1, 1, 1);
+    //             blob.rotation.set(0, 0, 0);
                 
-                // ⭐ 设置柔软材质
-                blob.traverse((child) => {
-                    if (child.isMesh && child.material) {
-                        child.material.roughness = 0.6;  // 更粗糙 = 更柔软
-                        child.material.metalness = 0.2;  // 降低金属度
-                        child.material.envMapIntensity = 0.5; // 降低环境反射
-                        child.material.transparent = true;
-                        child.material.opacity = 0.7;
-                    }
-                });
-            }
+    //             // ⭐ 设置柔软材质
+    //             blob.traverse((child) => {
+    //                 if (child.isMesh && child.material) {
+    //                     child.material.roughness = 0.6;  // 更粗糙 = 更柔软
+    //                     child.material.metalness = 0.2;  // 降低金属度
+    //                     child.material.envMapIntensity = 0.5; // 降低环境反射
+    //                     child.material.transparent = true;
+    //                     child.material.opacity = 0.7;
+    //                 }
+    //             });
+    //         }
+    //     }
+        
+    //     // ⭐ 柔和的漂浮和旋转
+    //     if (blob) {
+    //         blob.rotation.y += CONFIG.FLOAT_SPEED;
+    //         blob.position.y = 1 + Math.sin(Date.now() * 0.001) * 0.3;
+    //     }
+    // }
+
+    // Transmutation phase: 重生
+if (phase === 'transmutation') {
+    if (!transmutationStarted) {
+        transmutationStarted = true;
+        
+        // Panopticon 永久消失
+        if (panopticon) {
+            panopticon.visible = false;
         }
         
-        // ⭐ 柔和的漂浮和旋转
+        // 清理爆炸碎片
+        if (debrisSystem) {
+            scene.remove(debrisSystem);
+            debrisSystem = null;
+        }
+        
+        // ⭐ 重置 blob 到初始状态
         if (blob) {
-            blob.rotation.y += CONFIG.FLOAT_SPEED;
-            blob.position.y = 1 + Math.sin(Date.now() * 0.001) * 0.3;
+            blob.position.set(0, 1, 0);
+            blob.scale.set(1, 1, 1);
+            blob.rotation.set(0, 0, 0);
+            
+            // ⭐ 重置 morph targets 到 0
+            if (morphTargets) {
+                for (let i = 0; i < morphTargets.length; i++) {
+                    morphTargets[i] = 0;
+                }
+            }
+            
+            // ⭐ 设置柔软、强发光材质
+            blob.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    child.material.roughness = 0.9;      // 非常粗糙 = 柔软
+                    child.material.metalness = 0.0;      // 完全不金属
+                    child.material.envMapIntensity = 0.3; // 低环境反射
+                    
+                    // ⭐ 强自发光
+                    child.material.emissive = new THREE.Color(0xffffff);
+                    child.material.emissiveIntensity = 3.0;  // 很强的发光
+                    
+                    // ⭐ 半透明效果
+                    child.material.transparent = true;
+                    child.material.opacity = 0.85;
+                }
+            });
         }
     }
+    
+    // ⭐ 柔和的漂浮和旋转
+    if (blob) {
+        blob.rotation.y += CONFIG.FLOAT_SPEED;
+        blob.position.y = 1 + Math.sin(Date.now() * 0.001) * 0.3;
+    }
+    
+    // ⭐ 停止接收新的 morph 变化（不更新 morphTargets）
+    // 什么都不做，保持 morph = 0
+}
 
     if (phase !== 'transmutation') {
         transmutationStarted = false;
+        
+        // ⭐ 如果从 transmutation 回到其他阶段，恢复材质
+        if (blob && transmutationStarted === false) {
+            blob.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    // 恢复正常材质
+                    setupBlobMaterial(child);
+                }
+            });
+        }
     }
     
     renderer.render(scene, camera);
@@ -463,7 +544,21 @@ socket.on('state-update', (state) => {
     if (transformBtn) {
         transformBtn.style.display = state.phase === 'rupture' ? 'block' : 'none';
     }
+    // ⭐ Transmutation 时显示重启按钮
+    const resetBtn = document.getElementById('reset-btn');
+    if (resetBtn) {
+        resetBtn.style.display = state.phase === 'transmutation' ? 'block' : 'none';
+    }
 });
+
+// ⭐ 重启按钮点击事件
+const resetBtn = document.getElementById('reset-btn');
+if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+        console.log('🔄 Resetting experience...');
+        socket.emit('reset-experience');
+    });
+}
 
 function updateUI() {
     const watcherCount = document.getElementById('watcher-count');

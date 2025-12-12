@@ -38,7 +38,7 @@ io.on('connection', (socket) => {
         if (socket.role !== 'audience') return;
         
         socket.isGazing = true;
-        gameState.totalPressure += 2;
+        gameState.totalPressure += 0.5;
         
         // 添加凝视点（用于视觉效果）
         const gazePoint = {
@@ -56,7 +56,7 @@ io.on('connection', (socket) => {
     socket.on('gaze-hold', () => {
         if (!socket.isGazing) return;
         
-        gameState.totalPressure += 0.5;
+        gameState.totalPressure += 0.15;
         
         // 更新对应的凝视点强度
         const gazePoint = gameState.gazePoints.find(g => g.id === socket.id);
@@ -80,15 +80,24 @@ io.on('connection', (socket) => {
     
     // 触发转化（体验者按下按键）
     socket.on('trigger-transmutation', () => {
-        if (socket.role !== 'experiencer') return;
-        
+        console.log('Transmutation triggered');
         gameState.phase = 'transmutation';
+        gameState.totalPressure = 0;
         broadcastState();
+    });
+
+    // ⭐ 添加重启事件
+    socket.on('reset-experience', () => {
+        console.log('🔄 Experience reset requested');
         
-        // 10秒后重置
-        setTimeout(() => {
-            resetGame();
-        }, 10000);
+        // 重置所有状态
+        gameState.totalPressure = 0;
+        gameState.phase = 'waiting';
+        gameState.activeGazers.clear();
+        // watchers 数量保持不变
+        
+        console.log('✅ State reset to:', gameState);
+        broadcastState();
     });
     
     // 断开连接
