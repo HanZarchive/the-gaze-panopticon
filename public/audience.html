@@ -30,9 +30,11 @@
         <p>PHASE: <span id="phase-status">WAITING</span></p>
     </div>
     
-    <div id="orientation-status">
-        <p id="gaze-instruction">HOLD PHONE UP TO GAZE</p>
-        <p id="angle-display" style="font-size: 12px; opacity: 0.5;">β: -- γ: --</p>
+    <div id="face-detection-ui">
+        <video id="face-video" autoplay playsinline style="display:none;"></video>
+        <canvas id="face-canvas" width="320" height="240"></canvas>
+        <p id="gaze-instruction">LOOK AT THE SCREEN</p>
+        <p id="angle-display" style="font-size: 12px; opacity: 0.5; margin: 5px 0 0 0;">Loading model...</p>
     </div>
 </div>
         
@@ -45,6 +47,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.11/dist/face-api.min.js"></script>
     <script src="js/audience.js"></script>
 </body>
 </html>

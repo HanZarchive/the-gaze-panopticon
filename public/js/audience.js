@@ -990,73 +990,168 @@ function updateUI() {
 //     }, 2000);
 // });
 
-// ========== 设备朝向检测 ==========
+// ========== face-api.js 面部朝向检测 ==========
 
+let video;
+let canvas;
+let ctx;
 let isGazing = false;
 let gazeInterval;
+let modelsLoaded = false;
 
-// 请求权限（iOS 13+ 需要）
-function requestOrientationPermission() {
-    if (typeof DeviceOrientationEvent !== 'undefined' && 
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
-        // iOS 13+ 需要用户手动授权
-        DeviceOrientationEvent.requestPermission()
-            .then(permissionState => {
-                if (permissionState === 'granted') {
-                    console.log('Orientation permission granted');
-                    startOrientationDetection();
-                } else {
-                    console.log('Orientation permission denied');
-                    document.getElementById('gaze-instruction').textContent = 
-                        'PERMISSION DENIED';
-                }
-            })
-            .catch(console.error);
-    } else {
-        // Android 或旧版 iOS 不需要权限
-        console.log('Orientation available without permission');
-        startOrientationDetection();
-    }
-}
-
-// 开始监听设备朝向
-function startOrientationDetection() {
+// 初始化面部检测
+async function initFaceDetection() {
+    video = document.getElementById('face-video');
+    canvas = document.getElementById('face-canvas');
     const instruction = document.getElementById('gaze-instruction');
     const angleDisplay = document.getElementById('angle-display');
     
-    if (!instruction || !angleDisplay) {
-        console.error('Orientation UI elements not found');
+    if (!video || !canvas || !instruction || !angleDisplay) {
+        console.error('❌ UI elements not found');
         return;
     }
     
-    window.addEventListener('deviceorientation', (event) => {
-        const beta = event.beta;   // 前后倾斜 (-180 到 180)
-        const gamma = event.gamma;  // 左右倾斜 (-90 到 90)
-        
-        // 更新角度显示（用于调试）
-        angleDisplay.textContent = `β: ${beta ? beta.toFixed(0) : '--'}° γ: ${gamma ? gamma.toFixed(0) : '--'}°`;
-        
-        if (beta === null || gamma === null) {
-            return; // 传感器数据无效
-        }
-        
-        // 检测是否正对屏幕
-        // beta: 60-90° = 手机接近垂直
-        // gamma: -20 到 +20° = 不左右歪斜
-        const isFacingScreen = (
-            beta > 60 && beta < 90 &&
-            Math.abs(gamma) < 20
-        );
-        
-        if (isFacingScreen && !isGazing) {
-            startGazing();
-        } else if (!isFacingScreen && isGazing) {
-            stopGazing();
-        }
-    });
+    ctx = canvas.getContext('2d');
     
-    console.log('Orientation detection started');
-    instruction.textContent = 'HOLD PHONE UP TO GAZE';
+    try {
+        console.log('📦 Loading face-api models...');
+        instruction.textContent = 'LOADING MODELS...';
+        
+        // 加载模型（使用 CDN）
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.11/model';
+        
+        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        
+        console.log('✅ Models loaded');
+        modelsLoaded = true;
+        
+        // 启动摄像头
+        console.log('📹 Starting camera...');
+        instruction.textContent = 'STARTING CAMERA...';
+        
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                width: 320,
+                height: 240,
+                facingMode: 'user'
+            }
+        });
+        
+        video.srcObject = stream;
+        await video.play();
+        
+        console.log('✅ Camera started');
+        instruction.textContent = 'LOOK AT THE SCREEN TO GAZE';
+        angleDisplay.textContent = 'Ready';
+        
+        // 开始检测循环
+        detectFaceLoop();
+        
+    } catch (err) {
+        console.error('❌ Initialization error:', err);
+        instruction.textContent = 'ERROR: ' + err.message;
+        angleDisplay.textContent = 'Check console';
+    }
+}
+
+// 检测循环
+async function detectFaceLoop() {
+    if (!video || !video.srcObject) {
+        console.log('⚠️ Video not ready');
+        return;
+    }
+    
+    try {
+        // 检测面部和关键点
+        const detection = await faceapi
+            .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+            .withFaceLandmarks();
+        
+        // 清空画布
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 绘制视频帧
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        if (detection) {
+            const landmarks = detection.landmarks;
+            const positions = landmarks.positions;
+            
+            // 绘制面部框
+            const box = detection.detection.box;
+            ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(box.x, box.y, box.width, box.height);
+            
+            // 获取关键点
+            const nose = positions[30];        // 鼻尖
+            const leftEye = positions[36];     // 左眼外角
+            const rightEye = positions[45];    // 右眼外角
+            
+            // 计算眼睛中心
+            const eyeCenterX = (leftEye.x + rightEye.x) / 2;
+            const eyeCenterY = (leftEye.y + rightEye.y) / 2;
+            
+            // 鼻子相对眼睛的偏移
+            const offsetX = nose.x - eyeCenterX;
+            const offsetY = nose.y - eyeCenterY;
+            
+            // 眼睛间距（用于归一化）
+            const eyeDistance = Math.sqrt(
+                Math.pow(rightEye.x - leftEye.x, 2) +
+                Math.pow(rightEye.y - leftEye.y, 2)
+            );
+            
+            // 归一化（百分比）
+            const normalizedX = (offsetX / eyeDistance) * 100;
+            const normalizedY = (offsetY / eyeDistance) * 100;
+            
+            // 更新显示
+            const angleDisplay = document.getElementById('angle-display');
+            angleDisplay.textContent = `X: ${normalizedX.toFixed(0)}% Y: ${normalizedY.toFixed(0)}%`;
+            
+            // 绘制关键点
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(nose.x, nose.y, 4, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.fillStyle = '#00ff00';
+            [leftEye, rightEye].forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 3, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            
+            // 判断是否正对屏幕
+            const isFacing = (
+                Math.abs(normalizedX) < 20 &&
+                normalizedY > 5 && normalizedY < 35
+            );
+            
+            if (isFacing && !isGazing) {
+                startGazing();
+            } else if (!isFacing && isGazing) {
+                stopGazing();
+            }
+            
+        } else {
+            // 没有检测到脸
+            const angleDisplay = document.getElementById('angle-display');
+            angleDisplay.textContent = 'No face detected';
+            
+            if (isGazing) {
+                stopGazing();
+            }
+        }
+        
+    } catch (err) {
+        console.error('❌ Detection error:', err);
+    }
+    
+    // 继续下一帧
+    requestAnimationFrame(detectFaceLoop);
 }
 
 // 开始凝视
@@ -1066,7 +1161,7 @@ function startGazing() {
     instruction.textContent = 'GAZING...';
     instruction.classList.add('gazing');
     
-    console.log('Started gazing');
+    console.log('👁️ Started gazing');
     socket.emit('gaze-start');
     
     gazeInterval = setInterval(() => {
@@ -1078,24 +1173,23 @@ function startGazing() {
 function stopGazing() {
     isGazing = false;
     const instruction = document.getElementById('gaze-instruction');
-    instruction.textContent = 'HOLD PHONE UP TO GAZE';
+    instruction.textContent = 'LOOK AT THE SCREEN TO GAZE';
     instruction.classList.remove('gazing');
     
-    console.log('Stopped gazing');
+    console.log('👁️ Stopped gazing');
     clearInterval(gazeInterval);
     socket.emit('gaze-end');
 }
 
 // 页面加载后启动
 window.addEventListener('load', () => {
-    console.log('Page loaded');
+    console.log('🚀 Page loaded');
     init();
     
-    // 延迟 1 秒后请求权限（给 Three.js 时间加载）
     setTimeout(() => {
-        console.log('Requesting orientation permission...');
-        requestOrientationPermission();
-    }, 1000);
+        console.log('🎭 Starting face detection...');
+        initFaceDetection();
+    }, 2000);
 });
 
 // window.addEventListener('load', init);

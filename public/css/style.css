@@ -126,16 +126,25 @@ body {
     justify-content: flex-start;
     gap: 20px;
 }
-/* ⭐ 添加这些 */
-#orientation-status {
+
+/* ⭐ ml5.js 面部检测 UI */
+#face-detection-ui {
     position: fixed;
     bottom: 20px;
     right: 20px;
     background: rgba(0, 0, 0, 0.8);
     border: 2px solid #00ffff;
     border-radius: 8px;
-    padding: 15px 20px;
+    padding: 15px;
     z-index: 1000;
+}
+
+#face-canvas {
+    display: block;
+    width: 320px;
+    height: 240px;
+    border-radius: 4px;
+    margin-bottom: 10px;
 }
 
 #gaze-instruction {
@@ -143,6 +152,7 @@ body {
     font-family: 'Courier New', monospace;
     font-size: 14px;
     margin: 0;
+    text-align: center;
     text-transform: uppercase;
     text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
 }
@@ -156,6 +166,8 @@ body {
 #angle-display {
     color: #666;
     font-family: 'Courier New', monospace;
+    font-size: 12px;
+    text-align: center;
     margin: 5px 0 0 0;
 }
 
